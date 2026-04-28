@@ -1,128 +1,148 @@
 import streamlit as st
 import pickle
 import numpy as np
+import pandas as pd
 
 st.set_page_config(
-    page_title="Klasifikasi Pengelolaan Sampah",
-    layout="centered"
+    page_title="Klasifikasi Pengelolaan Sampah - Kota Bandung",
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS untuk styling modern dan responsif tema
+# Custom CSS untuk tampilan profesional eksekutif
 st.markdown("""
 <style>
-    /* Variabel CSS untuk tema gelap/terang */
-    :root {
-        --card-bg: var(--secondary-background-color);
-        --text-primary: var(--text-color);
-        --text-secondary: var(--secondary-text-color);
-        --border-radius: 12px;
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-        --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    /* Reset & base */
+    .main > div {
+        padding: 0rem 1rem;
     }
     
-    /* Status card styling */
-    .status-card {
-        background: var(--secondary-background-color);
-        border-radius: var(--border-radius);
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: var(--shadow-md);
-        transition: all 0.3s ease;
+    /* Header profesional */
+    .executive-header {
+        border-bottom: 3px solid #2C3E50;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
     }
     
-    .status-card h2 {
-        margin: 0;
+    .executive-title {
+        font-size: 1.75rem;
         font-weight: 600;
-        letter-spacing: -0.02em;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        color: #2C3E50;
+        letter-spacing: -0.01em;
+        margin: 0;
+    }
+    
+    .executive-subtitle {
+        font-size: 0.875rem;
+        color: #7F8C8D;
+        margin-top: 0.25rem;
+    }
+    
+    /* Status card profesional */
+    .status-card {
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border-left: 5px solid;
+    }
+    
+    .status-card h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.25rem;
+        font-weight: 600;
     }
     
     .status-card p {
-        margin: 0.75rem 0 0 0;
-        opacity: 0.85;
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.5;
     }
     
-    .metric-card {
-        background: var(--secondary-background-color);
-        border-radius: var(--border-radius);
+    /* Metric cards */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    
+    .metric-item {
+        background: #F8F9FA;
+        border-radius: 8px;
         padding: 1rem;
         text-align: center;
-        box-shadow: var(--shadow-sm);
-        transition: all 0.2s ease;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-    }
-    
-    .metric-value {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin: 0.5rem 0;
+        border: 1px solid #E9ECEF;
     }
     
     .metric-label {
-        font-size: 0.875rem;
-        opacity: 0.7;
+        font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        color: #6C757D;
+        margin-bottom: 0.5rem;
     }
     
-    .recommendation-item {
-        padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2C3E50;
     }
     
-    .recommendation-item:last-child {
-        border-bottom: none;
-    }
-    
-    .prob-table {
-        width: 100%;
-        margin-top: 0.75rem;
-        border-collapse: collapse;
-    }
-    
-    .prob-table tr td {
-        padding: 0.5rem;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-    }
-    
-    .prob-table tr:last-child td {
-        border-bottom: none;
-    }
-    
-    .prob-bar-container {
-        width: 100%;
-        background: rgba(128, 128, 128, 0.2);
-        border-radius: 4px;
-        height: 6px;
-        overflow: hidden;
-    }
-    
-    .prob-bar {
-        background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-color) var(--percent), transparent var(--percent));
-        height: 100%;
-        width: 100%;
-        border-radius: 4px;
-        transition: width 0.3s ease;
-    }
-    
-    .info-box {
-        background: rgba(70, 130, 200, 0.1);
-        border-left: 4px solid var(--primary-color);
+    /* Tabel probabilitas */
+    .probability-section {
+        margin: 1.5rem 0;
+        background: #F8F9FA;
+        border-radius: 8px;
         padding: 1rem;
-        border-radius: var(--border-radius);
-        margin: 1rem 0;
+        border: 1px solid #E9ECEF;
     }
     
-    /* Icon styling */
-    .status-icon {
-        font-size: 1.75rem;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    .section-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #2C3E50;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #E9ECEF;
+    }
+    
+    /* Rekomendasi */
+    .recommendation-card {
+        background: #F8F9FA;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-left: 3px solid #2C3E50;
+    }
+    
+    /* Dark mode adjustments */
+    @media (prefers-color-scheme: dark) {
+        .metric-item, .probability-section, .recommendation-card {
+            background: #2D2D2D;
+            border-color: #404040;
+        }
+        .metric-value, .section-title, .executive-title {
+            color: #E0E0E0;
+        }
+        .metric-label, .executive-subtitle {
+            color: #A0A0A0;
+        }
+    }
+    
+    /* Divider */
+    .custom-divider {
+        margin: 1.5rem 0;
+        border-top: 1px solid #E9ECEF;
+    }
+    
+    /* Footer */
+    .footer {
+        text-align: center;
+        padding: 1.5rem 0 0.5rem 0;
+        font-size: 0.75rem;
+        color: #6C757D;
+        border-top: 1px solid #E9ECEF;
+        margin-top: 2rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -135,54 +155,53 @@ def load_model():
 
 model = load_model()
 
-# Konstanta label dengan icon elegant
+# Konstanta label
 LABEL_CONFIG = {
     "KRITIS": {
-        "color": "#E74C3C", 
-        "bg": "rgba(231, 76, 60, 0.15)", 
-        "border": "#E74C3C",
-        "icon": "⚠️",
+        "color": "#C0392B",
+        "bg": "#FADBD8",
+        "border": "#C0392B",
         "desc": "Pengelolaan sampah dalam kondisi kritis. Diperlukan tindakan segera."
     },
     "WASPADA": {
-        "color": "#F39C12", 
-        "bg": "rgba(243, 156, 18, 0.15)", 
-        "border": "#F39C12",
-        "icon": "📌",
+        "color": "#D68910", 
+        "bg": "#FDEBD0",
+        "border": "#D68910",
         "desc": "Pengelolaan sampah perlu perhatian lebih. Risiko meningkat."
     },
     "AMAN": {
-        "color": "#27AE60", 
-        "bg": "rgba(39, 174, 96, 0.15)", 
-        "border": "#27AE60",
-        "icon": "✓",
+        "color": "#1E8449", 
+        "bg": "#D5F5E3",
+        "border": "#1E8449",
         "desc": "Pengelolaan sampah berjalan dengan baik."
     },
 }
 
-# Header
-st.markdown(
-    "<h1 style='text-align:center; font-weight:700; letter-spacing:-0.02em;'>🗑️ Klasifikasi Pengelolaan Sampah</h1>"
-    "<p style='text-align:center; opacity:0.7; margin-top:-0.5rem;'>Kota Bandung — Berbasis Waste Burden Index (WBI)</p>",
-    unsafe_allow_html=True
-)
-st.divider()
+# Header profesional
+st.markdown("""
+<div class="executive-header">
+    <div class="executive-title">Sistem Klasifikasi Pengelolaan Sampah</div>
+    <div class="executive-subtitle">Dinas Lingkungan Hidup Kota Bandung | Waste Burden Index (WBI)</div>
+</div>
+""", unsafe_allow_html=True)
 
 # Panduan fitur
-with st.expander("📋 Panduan Pengisian Fitur", expanded=False):
+with st.expander("Petunjuk Teknis", expanded=False):
     st.markdown("""
-    | Fitur | Keterangan | Rentang |
-    |---|---|---|
-    | **Rasio Angkut** | Proporsi sampah yang berhasil diangkut dari total input | 0.0 – 1.0 |
-    | **Rasio Diolah** | Proporsi sampah yang berhasil diolah | 0.0 – 1.0 |
-    | **Rasio Sisa** | Proporsi sampah yang tersisa (tidak terangkut/diolah) | 0.0 – 1.0 |
-    | **Indeks Jarak** | Indeks jarak tempuh TPS ke TPA (dinormalisasi) | 0.0 – 1.0 |
+    **Definisi Parameter:**
     
-    > **Catatan**: Nilai mendekati 1.0 menunjukkan kondisi yang lebih baik untuk rasio angkut dan diolah, namun perlu diwaspadai untuk rasio sisa dan indeks jarak.
+    | Parameter | Deskripsi | Rentang |
+    |---|---|---|
+    | Rasio Angkut | Volume sampah terangkut / total volume sampah | 0.00 - 1.00 |
+    | Rasio Diolah | Volume sampah terolah / total volume sampah | 0.00 - 1.00 |
+    | Rasio Sisa | Volume sampah tidak terkelola / total volume sampah | 0.00 - 1.00 |
+    | Indeks Jarak | Normalisasi jarak TPS ke TPA | 0.00 - 1.00 |
+    
+    > **Catatan:** Nilai optimal Rasio Angkut dan Rasio Diolah mendekati 1.00. Rasio Sisa dan Indeks Jarak semakin kecil semakin baik.
     """)
 
 # Mode input
-mode = st.radio("Pilih metode input:", ["Input Manual", "Pilih Contoh Data SWK"], horizontal=True)
+mode = st.radio("Metode Input Data:", ["Input Manual", "Contoh Data SWK"], horizontal=True)
 
 CONTOH_DATA = {
     "SWK Bojonagara": {"rasio_angkut": 0.55, "rasio_diolah": 0.30, "rasio_sisa": 0.45, "indeks_jarak": 0.80},
@@ -193,14 +212,14 @@ CONTOH_DATA = {
     "SWK Karees": {"rasio_angkut": 0.82, "rasio_diolah": 0.60, "rasio_sisa": 0.18, "indeks_jarak": 0.45}
 }
 
-if mode == "Pilih Contoh Data SWK":
-    pilihan = st.selectbox("Pilih SWK:", list(CONTOH_DATA.keys()))
+if mode == "Contoh Data SWK":
+    pilihan = st.selectbox("Pilih Wilayah SWK:", list(CONTOH_DATA.keys()))
     data = CONTOH_DATA[pilihan]
     rasio_angkut = data["rasio_angkut"]
     rasio_diolah = data["rasio_diolah"]
     rasio_sisa = data["rasio_sisa"]
     indeks_jarak = data["indeks_jarak"]
-    st.info(f"📌 Data otomatis terisi untuk: **{pilihan}**")
+    st.info(f"Data terisi: {pilihan}")
 else:
     rasio_angkut = None
     rasio_diolah = None
@@ -208,39 +227,39 @@ else:
     indeks_jarak = None
 
 # Form input
-st.markdown("### 📊 Input Data Fitur")
+st.markdown("### Parameter Input")
 col1, col2 = st.columns(2)
 
 with col1:
     rasio_angkut = st.number_input(
         "Rasio Angkut",
         min_value=0.0, max_value=1.0, step=0.01, format="%.3f",
-        value=float(rasio_angkut) if rasio_angkut is not None else 0.75,
-        help="Proporsi sampah yang berhasil diangkut (0.0 – 1.0)"
+        value=float(rasio_angkut) if rasio_angkut is not None else 0.75
     )
     rasio_diolah = st.number_input(
         "Rasio Diolah",
         min_value=0.0, max_value=1.0, step=0.01, format="%.3f",
-        value=float(rasio_diolah) if rasio_diolah is not None else 0.50,
-        help="Proporsi sampah yang berhasil diolah (0.0 – 1.0)"
+        value=float(rasio_diolah) if rasio_diolah is not None else 0.50
     )
 
 with col2:
     rasio_sisa = st.number_input(
         "Rasio Sisa",
         min_value=0.0, max_value=1.0, step=0.01, format="%.3f",
-        value=float(rasio_sisa) if rasio_sisa is not None else 0.25,
-        help="Proporsi sampah yang tersisa (0.0 – 1.0)"
+        value=float(rasio_sisa) if rasio_sisa is not None else 0.25
     )
     indeks_jarak = st.number_input(
         "Indeks Jarak",
         min_value=0.0, max_value=1.0, step=0.01, format="%.3f",
-        value=float(indeks_jarak) if indeks_jarak is not None else 0.40,
-        help="Indeks jarak TPS ke TPA yang dinormalisasi (0.0 – 1.0)"
+        value=float(indeks_jarak) if indeks_jarak is not None else 0.40
     )
 
-# Prediksi
-if st.button("🔍 Klasifikasikan", use_container_width=True, type="primary"):
+# Tombol analisis
+col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+with col_btn2:
+    analyze = st.button("Analisis Data", use_container_width=True, type="primary")
+
+if analyze:
     fitur = np.array([[rasio_angkut, rasio_diolah, rasio_sisa, indeks_jarak]])
     
     try:
@@ -252,77 +271,101 @@ if st.button("🔍 Klasifikasikan", use_container_width=True, type="primary"):
         
         cfg = LABEL_CONFIG[label]
         
-        # Status card dengan Streamlit native components (bukan raw HTML)
-        with st.container():
-            # Warna background berdasarkan status
-            if label == "KRITIS":
-                st.error(f"**{cfg['icon']} STATUS: {label}**")
-            elif label == "WASPADA":
-                st.warning(f"**{cfg['icon']} STATUS: {label}**")
-            else:
-                st.success(f"**{cfg['icon']} STATUS: {label}**")
-            
-            st.markdown(cfg['desc'])
+        # Status card
+        st.markdown("### Hasil Klasifikasi")
         
-        # Probabilitas menggunakan komponen Streamlit native
+        if label == "KRITIS":
+            st.markdown(f"""
+            <div class="status-card" style="background:{cfg['bg']}; border-left-color:{cfg['border']};">
+                <h3 style="color:{cfg['color']};">Status: {label}</h3>
+                <p>{cfg['desc']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        elif label == "WASPADA":
+            st.markdown(f"""
+            <div class="status-card" style="background:{cfg['bg']}; border-left-color:{cfg['border']};">
+                <h3 style="color:{cfg['color']};">Status: {label}</h3>
+                <p>{cfg['desc']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="status-card" style="background:{cfg['bg']}; border-left-color:{cfg['border']};">
+                <h3 style="color:{cfg['color']};">Status: {label}</h3>
+                <p>{cfg['desc']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Probabilitas dengan tabel profesional
         if hasattr(model, "predict_proba"):
-            st.markdown("### 📈 Probabilitas per Kategori")
             proba = model.predict_proba(fitur)[0]
             classes = [str(c).upper() for c in model.classes_]
             
-            # Buat DataFrame untuk ditampilkan
-            proba_data = []
-            for c, p in sorted(zip(classes, proba), key=lambda x: -x[1]):
-                proba_data.append({"Kategori": c, "Probabilitas": f"{p*100:.1f}%", "Nilai": p})
+            proba_df = pd.DataFrame([
+                {"Kategori": c, "Probabilitas": f"{p*100:.1f}%", "Nilai": p}
+                for c, p in sorted(zip(classes, proba), key=lambda x: -x[1])
+            ])
             
-            # Tampilkan dengan progress bar native Streamlit
-            for item in proba_data:
-                col1, col2 = st.columns([3, 1])
+            st.markdown('<div class="probability-section">', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Distribusi Probabilitas</div>', unsafe_allow_html=True)
+            
+            for _, row in proba_df.iterrows():
+                col1, col2, col3 = st.columns([2, 1, 3])
                 with col1:
-                    st.markdown(f"**{item['Kategori']}**")
-                    st.progress(item['Nilai'], text=f"{item['Probabilitas']}")
+                    st.markdown(f"**{row['Kategori']}**")
                 with col2:
-                    st.markdown(f"<h3 style='text-align:right; margin:0;'>{item['Probabilitas']}</h3>", 
-                               unsafe_allow_html=True)
+                    st.markdown(f"<span style='font-weight:600;'>{row['Probabilitas']}</span>", unsafe_allow_html=True)
+                with col3:
+                    st.progress(row['Nilai'])
+            
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        # Ringkasan input dengan metric cards
-        st.markdown("### 📊 Ringkasan Input")
-        col_a, col_b, col_c, col_d = st.columns(4)
+        # Metric cards
+        st.markdown('<div class="section-title">Ringkasan Parameter</div>', unsafe_allow_html=True)
         
-        with col_a:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
             st.metric("Rasio Angkut", f"{rasio_angkut:.3f}")
-        with col_b:
+        with m2:
             st.metric("Rasio Diolah", f"{rasio_diolah:.3f}")
-        with col_c:
+        with m3:
             st.metric("Rasio Sisa", f"{rasio_sisa:.3f}")
-        with col_d:
+        with m4:
             st.metric("Indeks Jarak", f"{indeks_jarak:.3f}")
         
-        # Rekomendasi
-        st.markdown("### 💡 Rekomendasi")
+        # Rekomendasi teknis
+        st.markdown('<div class="section-title">Rekomendasi Teknis</div>', unsafe_allow_html=True)
+        
         rekomendasi = []
         if rasio_sisa > 0.3:
-            rekomendasi.append("⚠️ **Rasio sisa tinggi** — tambah frekuensi pengangkutan atau kapasitas TPS.")
+            rekomendasi.append("• Meningkatkan frekuensi pengangkutan sampah")
+            rekomendasi.append("• Optimalisasi kapasitas TPS")
         if rasio_angkut < 0.7:
-            rekomendasi.append("⚠️ **Rasio angkut rendah** — evaluasi armada dan jadwal pengangkutan.")
+            rekomendasi.append("• Evaluasi jumlah dan rute armada pengangkut")
+            rekomendasi.append("• Penjadwalan ulang operasional")
         if rasio_diolah < 0.4:
-            rekomendasi.append("⚠️ **Rasio diolah rendah** — tingkatkan kapasitas fasilitas pengolahan.")
+            rekomendasi.append("• Peningkatan kapasitas fasilitas pengolahan")
+            rekomendasi.append("• Optimalisasi pengolahan sampah TPS")
         if indeks_jarak > 0.7:
-            rekomendasi.append("⚠️ **Jarak ke TPA jauh** — pertimbangkan optimasi rute atau TPA alternatif.")
-        if not rekomendasi:
-            rekomendasi.append("✅ Semua indikator dalam kondisi baik. Pertahankan performa saat ini.")
+            rekomendasi.append("• Kajian rute transportasi sampah")
+            rekomendasi.append("• Evaluasi lokasi TPA alternatif")
         
-        for r in rekomendasi:
-            st.markdown(r)
-            
+        if not rekomendasi:
+            st.markdown('<div class="recommendation-card">✓ Seluruh parameter dalam batas optimal. Pertahankan kinerja saat ini.</div>', unsafe_allow_html=True)
+        else:
+            for r in rekomendasi:
+                st.markdown(f'<div class="recommendation-card">{r}</div>', unsafe_allow_html=True)
+        
+        # Tanda tangan digital (opsional)
+        st.caption(f"*Hasil analisis berdasarkan model WBI • {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M')}*")
+        
     except Exception as e:
-        st.error(f"❌ Terjadi kesalahan saat prediksi: {e}")
+        st.error(f"Error: {e}")
 
 # Footer
-st.divider()
-st.markdown(
-    "<div style='text-align:center; opacity:0.6; font-size:0.875rem;'>"
-    "Developed with ❤️ by <strong>Masoem University</strong> – Fakultas Teknik"
-    "</div>",
-    unsafe_allow_html=True
-)
+st.markdown("""
+<div class="footer">
+    Universitas Ma'soem<br>
+    Fakultas Teknik | © 2026
+</div>
+""", unsafe_allow_html=True)
