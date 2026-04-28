@@ -149,7 +149,7 @@ with col_left:
             )
         
         # Tombol Klasifikasi
-        if st.button("🔍 Klasifikasikan", type="primary", use_container_width=True):
+        if st.button("Klasifikasi dan Prediksi", type="primary", use_container_width=True):
             fitur = np.array([[rasio_angkut, rasio_diolah, rasio_sisa, indeks_jarak]])
             
             try:
