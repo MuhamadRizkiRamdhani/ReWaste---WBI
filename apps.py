@@ -2,6 +2,11 @@ import streamlit as st
 import pickle
 import numpy as np
 
+st.set_page_config(
+    page_title="Klasifikasi Pengelolaan Sampah",
+    page_icon="🗑️",
+    layout="centered"
+)
 # ── Load model ──────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
@@ -18,11 +23,7 @@ LABEL_CONFIG = {
 }
 
 # ── Halaman ──────────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Klasifikasi Pengelolaan Sampah",
-    page_icon="🗑️",
-    layout="centered"
-)
+
 
 st.markdown(
     "<h1 style='text-align:center;'>🗑️ Klasifikasi Pengelolaan Sampah</h1>"
