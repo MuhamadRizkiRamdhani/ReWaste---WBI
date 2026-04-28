@@ -388,6 +388,13 @@ with col_right:
             
             # Tambahkan polygon dari GeoJSON
             if show_boundary and geojson_data:
+                # Fungsi untuk mengambil nama wilayah dari properties
+                def get_wilayah_name(feature):
+                    props = feature.get('properties', {})
+                    # Ambil dari field 'nama_wilayah' di JSON Anda
+                    nama = props.get('nama_wilayah', props.get('KECAMATAN', 'Wilayah'))
+                    return nama
+                
                 folium.GeoJson(
                     geojson_data,
                     name='Batas Wilayah Kota Bandung',
@@ -397,8 +404,17 @@ with col_right:
                         'weight': 1.5,
                         'fillOpacity': 0.1,
                     },
-                    tooltip='Kota Bandung',
-                    popup=folium.Popup('<b>Kota Bandung</b><br>Wilayah Administrasi', max_width=200)
+                    tooltip=folium.GeoJsonTooltip(
+                        fields=['nama_wilayah'],
+                        aliases=['Wilayah:'],
+                        localize=True,
+                        sticky=True
+                    ),
+                    popup=folium.GeoJsonPopup(
+                        fields=['nama_wilayah', 'id_wilayah'],
+                        aliases=['Wilayah:', 'ID Wilayah:'],
+                        localize=True
+                    )
                 ).add_to(m)
             
             # Tambahkan marker SWK
