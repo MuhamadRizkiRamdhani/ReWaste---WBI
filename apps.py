@@ -2,7 +2,7 @@ import streamlit as st
 import pickle
 import numpy as np
 import folium
-from streamlit_folium import st_folium
+from streamlit_folium import folium_static
 import json
 
 st.set_page_config(
@@ -239,12 +239,14 @@ with col_left:
 with col_right:
     st.markdown("### 🗺️ Peta Wilayah Kota Bandung")
     
-    # Buat peta dengan folium (PASTI JALAN)
+    # Buat peta
     center_lat = -6.9146
     center_lon = 107.6098
     
-    # Pakai OpenStreetMap (paling standar)
     m = folium.Map(location=[center_lat, center_lon], zoom_start=11)
+    
+    # Tambahkan tile alternatif
+    folium.TileLayer('openstreetmap').add_to(m)
     
     def get_wilayah_color(wilayah_name):
         status = st.session_state.wilayah_status.get(wilayah_name, "")
@@ -296,7 +298,6 @@ with col_right:
                 popup=folium.Popup(popup_html, max_width=250)
             ).add_to(m)
             
-            # Label di tengah polygon
             if show_labels and wilayah_name:
                 try:
                     geom = feature.get('geometry', {})
@@ -329,8 +330,8 @@ with col_right:
     '''
     m.get_root().html.add_child(folium.Element(legend_html))
     
-    # Tampilkan peta
-    st_folium(m, width=None, height=550, key="map_main")
+    # PAKAI INI - folium_static bukan st_folium
+    folium_static(m, width=700, height=550)
     
     st.caption("📌 Klik area untuk melihat detail | Warna berubah setelah klasifikasi")
 
