@@ -34,6 +34,9 @@ st.markdown("""
         margin: 0;
         font-weight: 600;
         letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
     
     .status-card p {
@@ -83,7 +86,7 @@ st.markdown("""
         border-collapse: collapse;
     }
     
-    .prob-table td {
+    .prob-table tr td {
         padding: 0.5rem;
         border-bottom: 1px solid rgba(128, 128, 128, 0.1);
     }
@@ -92,12 +95,20 @@ st.markdown("""
         border-bottom: none;
     }
     
-    .prob-bar {
-        background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-color) var(--percent), rgba(128,128,128,0.2) var(--percent));
+    .prob-bar-container {
+        width: 100%;
+        background: rgba(128, 128, 128, 0.2);
         border-radius: 4px;
         height: 6px;
+        overflow: hidden;
+    }
+    
+    .prob-bar {
+        background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-color) var(--percent), transparent var(--percent));
+        height: 100%;
         width: 100%;
-        margin-top: 4px;
+        border-radius: 4px;
+        transition: width 0.3s ease;
     }
     
     .info-box {
@@ -106,6 +117,12 @@ st.markdown("""
         padding: 1rem;
         border-radius: var(--border-radius);
         margin: 1rem 0;
+    }
+    
+    /* Icon styling */
+    .status-icon {
+        font-size: 1.75rem;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     }
 </style>
 """, unsafe_allow_html=True)
@@ -118,38 +135,41 @@ def load_model():
 
 model = load_model()
 
-# Konstanta label tanpa emoticon
+# Konstanta label dengan icon elegant
 LABEL_CONFIG = {
     "KRITIS": {
         "color": "#E74C3C", 
         "bg": "rgba(231, 76, 60, 0.15)", 
         "border": "#E74C3C",
+        "icon": "⚠️",
         "desc": "Pengelolaan sampah dalam kondisi kritis. Diperlukan tindakan segera."
     },
     "WASPADA": {
         "color": "#F39C12", 
         "bg": "rgba(243, 156, 18, 0.15)", 
         "border": "#F39C12",
+        "icon": "📌",
         "desc": "Pengelolaan sampah perlu perhatian lebih. Risiko meningkat."
     },
     "AMAN": {
         "color": "#27AE60", 
         "bg": "rgba(39, 174, 96, 0.15)", 
         "border": "#27AE60",
+        "icon": "✓",
         "desc": "Pengelolaan sampah berjalan dengan baik."
     },
 }
 
 # Header
 st.markdown(
-    "<h1 style='text-align:center; font-weight:700; letter-spacing:-0.02em;'>Klasifikasi Pengelolaan Sampah</h1>"
+    "<h1 style='text-align:center; font-weight:700; letter-spacing:-0.02em;'>🗑️ Klasifikasi Pengelolaan Sampah</h1>"
     "<p style='text-align:center; opacity:0.7; margin-top:-0.5rem;'>Kota Bandung — Berbasis Waste Burden Index (WBI)</p>",
     unsafe_allow_html=True
 )
 st.divider()
 
 # Panduan fitur
-with st.expander("Panduan Pengisian Fitur", expanded=False):
+with st.expander("📋 Panduan Pengisian Fitur", expanded=False):
     st.markdown("""
     | Fitur | Keterangan | Rentang |
     |---|---|---|
@@ -180,7 +200,7 @@ if mode == "Pilih Contoh Data SWK":
     rasio_diolah = data["rasio_diolah"]
     rasio_sisa = data["rasio_sisa"]
     indeks_jarak = data["indeks_jarak"]
-    st.info(f"Data otomatis terisi untuk: **{pilihan}**")
+    st.info(f"📌 Data otomatis terisi untuk: **{pilihan}**")
 else:
     rasio_angkut = None
     rasio_diolah = None
@@ -188,7 +208,7 @@ else:
     indeks_jarak = None
 
 # Form input
-st.markdown("### Input Data Fitur")
+st.markdown("### 📊 Input Data Fitur")
 col1, col2 = st.columns(2)
 
 with col1:
@@ -220,7 +240,7 @@ with col2:
     )
 
 # Prediksi
-if st.button("Klasifikasikan", use_container_width=True, type="primary"):
+if st.button("🔍 Klasifikasikan", use_container_width=True, type="primary"):
     fitur = np.array([[rasio_angkut, rasio_diolah, rasio_sisa, indeks_jarak]])
     
     try:
@@ -232,105 +252,77 @@ if st.button("Klasifikasikan", use_container_width=True, type="primary"):
         
         cfg = LABEL_CONFIG[label]
         
-        # Probabilitas
-        proba_html = ""
+        # Status card dengan Streamlit native components (bukan raw HTML)
+        with st.container():
+            # Warna background berdasarkan status
+            if label == "KRITIS":
+                st.error(f"**{cfg['icon']} STATUS: {label}**")
+            elif label == "WASPADA":
+                st.warning(f"**{cfg['icon']} STATUS: {label}**")
+            else:
+                st.success(f"**{cfg['icon']} STATUS: {label}**")
+            
+            st.markdown(cfg['desc'])
+        
+        # Probabilitas menggunakan komponen Streamlit native
         if hasattr(model, "predict_proba"):
+            st.markdown("### 📈 Probabilitas per Kategori")
             proba = model.predict_proba(fitur)[0]
             classes = [str(c).upper() for c in model.classes_]
             
-            proba_rows = ""
+            # Buat DataFrame untuk ditampilkan
+            proba_data = []
             for c, p in sorted(zip(classes, proba), key=lambda x: -x[1]):
-                proba_rows += f"""
-                <tr>
-                    <td style="padding:0.5rem 0;"><strong>{c}</strong></td>
-                    <td style="padding:0.5rem 0; text-align:right;"><strong>{p*100:.1f}%</strong></td>
-                </tr>
-                <tr>
-                    <td colspan="2" style="padding:0 0 0.5rem 0;">
-                        <div class="prob-bar" style="--percent: {p*100}%"></div>
-                    </td>
-                </tr>
-                """
+                proba_data.append({"Kategori": c, "Probabilitas": f"{p*100:.1f}%", "Nilai": p})
             
-            proba_html = f"""
-            <div style="margin-top: 1rem;">
-                <p style="font-weight:600; margin-bottom:0.5rem;">Probabilitas per Kategori</p>
-                <table style="width:100%;">
-                    {proba_rows}
-                </table>
-            </div>
-            """
-        
-        # Status card
-        st.markdown(f"""
-        <div class="status-card" style="border-left: 4px solid {cfg['border']}; background: {cfg['bg']};">
-            <h2 style="color: {cfg['color']};">Status: {label}</h2>
-            <p>{cfg['desc']}</p>
-            {proba_html}
-        </div>
-        """, unsafe_allow_html=True)
+            # Tampilkan dengan progress bar native Streamlit
+            for item in proba_data:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown(f"**{item['Kategori']}**")
+                    st.progress(item['Nilai'], text=f"{item['Probabilitas']}")
+                with col2:
+                    st.markdown(f"<h3 style='text-align:right; margin:0;'>{item['Probabilitas']}</h3>", 
+                               unsafe_allow_html=True)
         
         # Ringkasan input dengan metric cards
-        st.markdown("### Ringkasan Input")
+        st.markdown("### 📊 Ringkasan Input")
         col_a, col_b, col_c, col_d = st.columns(4)
         
         with col_a:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">Rasio Angkut</div>
-                <div class="metric-value">{rasio_angkut:.3f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.metric("Rasio Angkut", f"{rasio_angkut:.3f}")
         with col_b:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">Rasio Diolah</div>
-                <div class="metric-value">{rasio_diolah:.3f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.metric("Rasio Diolah", f"{rasio_diolah:.3f}")
         with col_c:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">Rasio Sisa</div>
-                <div class="metric-value">{rasio_sisa:.3f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.metric("Rasio Sisa", f"{rasio_sisa:.3f}")
         with col_d:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">Indeks Jarak</div>
-                <div class="metric-value">{indeks_jarak:.3f}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.metric("Indeks Jarak", f"{indeks_jarak:.3f}")
         
         # Rekomendasi
-        st.markdown("### Rekomendasi")
+        st.markdown("### 💡 Rekomendasi")
         rekomendasi = []
         if rasio_sisa > 0.3:
-            rekomendasi.append("Rasio sisa tinggi — tambah frekuensi pengangkutan atau kapasitas TPS.")
+            rekomendasi.append("⚠️ **Rasio sisa tinggi** — tambah frekuensi pengangkutan atau kapasitas TPS.")
         if rasio_angkut < 0.7:
-            rekomendasi.append("Rasio angkut rendah — evaluasi armada dan jadwal pengangkutan.")
+            rekomendasi.append("⚠️ **Rasio angkut rendah** — evaluasi armada dan jadwal pengangkutan.")
         if rasio_diolah < 0.4:
-            rekomendasi.append("Rasio diolah rendah — tingkatkan kapasitas fasilitas pengolahan.")
+            rekomendasi.append("⚠️ **Rasio diolah rendah** — tingkatkan kapasitas fasilitas pengolahan.")
         if indeks_jarak > 0.7:
-            rekomendasi.append("Jarak ke TPA jauh — pertimbangkan optimasi rute atau TPA alternatif.")
+            rekomendasi.append("⚠️ **Jarak ke TPA jauh** — pertimbangkan optimasi rute atau TPA alternatif.")
         if not rekomendasi:
-            rekomendasi.append("Semua indikator dalam kondisi baik. Pertahankan performa saat ini.")
+            rekomendasi.append("✅ Semua indikator dalam kondisi baik. Pertahankan performa saat ini.")
         
         for r in rekomendasi:
-            st.markdown(f"• {r}")
+            st.markdown(r)
             
     except Exception as e:
-        st.error(f"Terjadi kesalahan saat prediksi: {e}")
+        st.error(f"❌ Terjadi kesalahan saat prediksi: {e}")
 
 # Footer
 st.divider()
 st.markdown(
     "<div style='text-align:center; opacity:0.6; font-size:0.875rem;'>"
-    "Developed by <strong>Masoem University</strong> – Fakultas Teknik"
+    "Developed with ❤️ by <strong>Masoem University</strong> – Fakultas Teknik"
     "</div>",
     unsafe_allow_html=True
 )
