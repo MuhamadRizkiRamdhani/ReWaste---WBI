@@ -249,8 +249,21 @@ with col_right:
         center_lat = -6.9146
         center_lon = 107.6098
         
-        # PAKAI INI - OpenStreetMap biasa
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles='OpenStreetMap')
+        # Pakai Google Maps Satellite
+        m = folium.Map(
+            location=[center_lat, center_lon], 
+            zoom_start=12,
+            control_scale=True
+        )
+        
+        # Tambahkan tile manual
+        folium.TileLayer(
+            tiles='https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+            attr='Google',
+            name='Google Maps',
+            overlay=False,
+            control=True
+        ).add_to(m)
         
         def get_wilayah_color(wilayah_name):
             status = st.session_state.wilayah_status.get(wilayah_name, "")
