@@ -281,38 +281,57 @@ with col_right:
             with open("3273-kota-bandung-level-kewilayahan.json", "r") as f:
                 geojson_data = json.load(f)
             
-            # Hitung center dari GeoJSON
             center_lat = -6.9146
             center_lon = 107.6098
             
             m = folium.Map(location=[center_lat, center_lon], zoom_start=11, control_scale=True)
             
-            # Tile layers
             folium.TileLayer('CartoDB positron', name='Light Map', show=True).add_to(m)
             folium.TileLayer('OpenStreetMap', name='Street Map', show=False).add_to(m)
             
-            # Fungsi untuk menentukan warna berdasarkan status
             def get_wilayah_color(wilayah_name):
                 status = st.session_state.wilayah_status.get(wilayah_name, "")
                 if status == "KRITIS":
-                    return "#E74C3C"  # Merah
+                    return "#E74C3C"
                 elif status == "WASPADA":
-                    return "#F39C12"  # Kuning
+                    return "#F39C12"
                 elif status == "AMAN":
-                    return "#27AE60"  # Hijau
+                    return "#27AE60"
                 else:
-                    return "#95A5A6"  # Abu-abu (belum diprediksi)
+                    return "#95A5A6"
             
-            # Tambahkan polygon dengan warna sesuai status
             if show_boundary and geojson_data:
                 for feature in geojson_data.get('features', []):
                     props = feature.get('properties', {})
                     wilayah_name = props.get('nama_wilayah', '')
                     
-                    # Dapatkan warna berdasarkan status yang tersimpan
                     fill_color = get_wilayah_color(wilayah_name)
+                    params = st.session_state.wilayah_params.get(wilayah_name, {})
                     
-                    # Buat GeoJson dengan warna dinamis
+                    # Buat popup text dengan aman
+                    status_text = st.session_state.wilayah_status.get(wilayah_name, 'Belum diprediksi')
+                    angkut_val = params.get('rasio_angkut')
+                    diolah_val = params.get('rasio_diolah')
+                    sisa_val = params.get('rasio_sisa')
+                    jarak_val = params.get('indeks_jarak')
+                    
+                    angkut_str = f"{angkut_val:.3f}" if angkut_val is not None else '-'
+                    diolah_str = f"{diolah_val:.3f}" if diolah_val is not None else '-'
+                    sisa_str = f"{sisa_val:.3f}" if sisa_val is not None else '-'
+                    jarak_str = f"{jarak_val:.3f}" if jarak_val is not None else '-'
+                    
+                    popup_html = f"""
+                    <div style="min-width: 200px;">
+                        <b>{wilayah_name}</b><br>
+                        Status: {status_text}<br>
+                        <hr style="margin: 5px 0;">
+                        Rasio Angkut: {angkut_str}<br>
+                        Rasio Diolah: {diolah_str}<br>
+                        Rasio Sisa: {sisa_str}<br>
+                        Indeks Jarak: {jarak_str}
+                    </div>
+                    """
+                    
                     folium.GeoJson(
                         feature,
                         name=wilayah_name if wilayah_name else 'Wilayah',
@@ -322,21 +341,11 @@ with col_right:
                             'weight': 1.5,
                             'fillOpacity': 0.6 if color != "#95A5A6" else 0.3,
                         },
-                        tooltip=folium.Tooltip(f"{wilayah_name}", sticky=True),
-                        popup=folium.Popup(f"""
-                            <b>{wilayah_name}</b><br>
-                            Status: {st.session_state.wilayah_status.get(wilayah_name, 'Belum diprediksi')}<br>
-                            <hr>
-                            Rasio Angkut: {st.session_state.wilayah_params.get(wilayah_name, {}).get('rasio_angkut', '-'):.3f if st.session_state.wilayah_params.get(wilayah_name, {}).get('rasio_angkut') else '-'}<br>
-                            Rasio Diolah: {st.session_state.wilayah_params.get(wilayah_name, {}).get('rasio_diolah', '-'):.3f if st.session_state.wilayah_params.get(wilayah_name, {}).get('rasio_diolah') else '-'}<br>
-                            Rasio Sisa: {st.session_state.wilayah_params.get(wilayah_name, {}).get('rasio_sisa', '-'):.3f if st.session_state.wilayah_params.get(wilayah_name, {}).get('rasio_sisa') else '-'}<br>
-                            Indeks Jarak: {st.session_state.wilayah_params.get(wilayah_name, {}).get('indeks_jarak', '-'):.3f if st.session_state.wilayah_params.get(wilayah_name, {}).get('indeks_jarak') else '-'}
-                        """, max_width=250)
+                        tooltip=folium.Tooltip(wilayah_name if wilayah_name else "Wilayah", sticky=True),
+                        popup=folium.Popup(popup_html, max_width=300)
                     ).add_to(m)
                     
-                    # Tambahkan label jika dipilih
                     if show_labels and wilayah_name:
-                        # Dapatkan center dari polygon untuk label
                         try:
                             if feature.get('geometry', {}).get('type') == 'Polygon':
                                 coords = feature['geometry']['coordinates'][0]
@@ -346,19 +355,15 @@ with col_right:
                                     center_lat_label = sum(lats) / len(lats)
                                     center_lon_label = sum(lons) / len(lons)
                                     
-                                    status = st.session_state.wilayah_status.get(wilayah_name, "")
-                                    color = get_wilayah_color(wilayah_name)
-                                    
                                     folium.Marker(
                                         location=[center_lat_label, center_lon_label],
                                         icon=folium.DivIcon(
-                                            html=f'<div style="font-size: 11px; font-weight: 600; background: white; padding: 2px 8px; border-radius: 4px; border: 2px solid {color}; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap;">{wilayah_name}</div>'
+                                            html=f'<div style="font-size: 10px; font-weight: 600; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid {fill_color}; white-space: nowrap;">{wilayah_name}</div>'
                                         )
                                     ).add_to(m)
                         except:
                             pass
             
-            # Legend
             legend_html = '''
             <div style="position: fixed; bottom: 30px; right: 30px; z-index: 1000; background: white; padding: 10px 14px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 12px;">
                 <strong>Status Wilayah</strong><br>
