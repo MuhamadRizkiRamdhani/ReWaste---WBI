@@ -33,7 +33,7 @@ def load_geojson():
                 'id': props.get('id_wilayah', ''),
                 'geometry': feature.get('geometry')
             })
-    return wilayah_list
+    return wilayah_list, data
 
 # Inisialisasi session state
 if 'wilayah_status' not in st.session_state:
@@ -104,6 +104,10 @@ st.divider()
 # Layout 2 kolom
 col_left, col_right = st.columns([1, 1.2])
 
+# Load data
+wilayah_list, geojson_data = load_geojson()
+wilayah_names = [w['nama'] for w in wilayah_list if w['nama']]
+
 # ==================== KOLOM KIRI ====================
 with col_left:
     with st.expander("📋 Panduan Pengisian Fitur", expanded=False):
@@ -115,9 +119,6 @@ with col_left:
         | **Rasio Sisa** | Proporsi sampah yang tersisa | 0.0 – 1.0 |
         | **Indeks Jarak** | Indeks jarak tempuh TPS ke TPA | 0.0 – 1.0 |
         """)
-    
-    wilayah_list = load_geojson()
-    wilayah_names = [w['nama'] for w in wilayah_list if w['nama']]
     
     if wilayah_names:
         selected_wilayah = st.selectbox("Pilih Wilayah:", wilayah_names)
@@ -158,7 +159,6 @@ with col_left:
                 if label not in LABEL_CONFIG:
                     label = "WASPADA"
                 
-                # Simpan ke session state
                 st.session_state.wilayah_status[selected_wilayah] = label
                 st.session_state.wilayah_params[selected_wilayah] = {
                     "rasio_angkut": rasio_angkut,
@@ -167,7 +167,6 @@ with col_left:
                     "indeks_jarak": indeks_jarak
                 }
                 
-                # Simpan hasil prediksi untuk ditampilkan
                 st.session_state.prediction_result = {
                     "label": label,
                     "cfg": LABEL_CONFIG[label],
@@ -179,11 +178,12 @@ with col_left:
                     }
                 }
                 st.session_state.show_prediction = True
+                st.rerun()
                 
             except Exception as e:
                 st.error(f"Error: {e}")
         
-        # TAMPILAN HASIL KLASIFIKASI (di kolom kiri)
+        # TAMPILAN HASIL KLASIFIKASI
         if st.session_state.show_prediction and st.session_state.prediction_result:
             res = st.session_state.prediction_result
             label = res["label"]
@@ -201,7 +201,6 @@ with col_left:
             
             st.write(cfg['desc'])
             
-            # Probabilitas
             if hasattr(model, "predict_proba"):
                 st.write("**Probabilitas:**")
                 fitur = np.array([[res["params"]["rasio_angkut"], res["params"]["rasio_diolah"], 
@@ -212,7 +211,6 @@ with col_left:
                 for c, p in sorted(zip(classes, proba), key=lambda x: -x[1]):
                     st.progress(p, text=f"{c}: {p*100:.1f}%")
             
-            # Ringkasan
             st.write("**Ringkasan Input:**")
             a, b, c, d = st.columns(4)
             a.metric("Rasio Angkut", f"{res['params']['rasio_angkut']:.3f}")
@@ -220,7 +218,6 @@ with col_left:
             c.metric("Rasio Sisa", f"{res['params']['rasio_sisa']:.3f}")
             d.metric("Indeks Jarak", f"{res['params']['indeks_jarak']:.3f}")
             
-            # Rekomendasi
             st.write("**Rekomendasi:**")
             params = res["params"]
             rekomendasi = []
@@ -240,111 +237,102 @@ with col_left:
 
 # ==================== KOLOM KANAN (PETA) ====================
 with col_right:
-        st.markdown("### 🗺️ Peta Wilayah Kota Bandung")
-        
-        # Embed Google Maps langsung
-        map_html = '''
-        <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126847.66378256428!2d107.56345259232488!3d-6.917463825314377!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e68e67342eb2041%3A0x8d3ddf732125a574!2sBandung%2C%20Bandung%20City%2C%20West%20Java!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid" 
-            width="100%" 
-            height="550" 
-            style="border:0; border-radius:12px;" 
-            allowfullscreen="" 
-            loading="lazy">
-        </iframe>
-        '''
-        st.components.v1.html(map_html, height=570)
-        
-        st.caption("📌 Gunakan peta Google Maps untuk melihat batas wilayah")
-        
-        def get_wilayah_color(wilayah_name):
-            status = st.session_state.wilayah_status.get(wilayah_name, "")
-            if status == "KRITIS":
-                return "#E74C3C"
-            elif status == "WASPADA":
-                return "#F39C12"
-            elif status == "AMAN":
-                return "#27AE60"
-            else:
-                return "#95A5A6"
-        
-        if show_boundary:
-            for feature in geojson_data.get('features', []):
-                props = feature.get('properties', {})
-                wilayah_name = props.get('nama_wilayah', '')
+    st.markdown("### 🗺️ Peta Wilayah Kota Bandung")
+    
+    # Buat peta dengan folium (PASTI JALAN)
+    center_lat = -6.9146
+    center_lon = 107.6098
+    
+    # Pakai OpenStreetMap (paling standar)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=11)
+    
+    def get_wilayah_color(wilayah_name):
+        status = st.session_state.wilayah_status.get(wilayah_name, "")
+        if status == "KRITIS":
+            return "#E74C3C"
+        elif status == "WASPADA":
+            return "#F39C12"
+        elif status == "AMAN":
+            return "#27AE60"
+        else:
+            return "#95A5A6"
+    
+    if show_boundary and geojson_data:
+        for feature in geojson_data.get('features', []):
+            props = feature.get('properties', {})
+            wilayah_name = props.get('nama_wilayah', '')
+            
+            if not wilayah_name:
+                continue
                 
-                fill_color = get_wilayah_color(wilayah_name)
-                params = st.session_state.wilayah_params.get(wilayah_name, {})
-                
-                status_text = st.session_state.wilayah_status.get(wilayah_name, 'Belum diprediksi')
-                
-                popup_html = f"""
-                <div style="min-width: 180px;">
-                    <b>{wilayah_name}</b><br>
-                    Status: {status_text}<br>
-                    <hr>
-                    Rasio Angkut: {params.get('rasio_angkut', '-')}<br>
-                    Rasio Diolah: {params.get('rasio_diolah', '-')}<br>
-                    Rasio Sisa: {params.get('rasio_sisa', '-')}<br>
-                    Indeks Jarak: {params.get('indeks_jarak', '-')}
-                </div>
-                """
-                
-                opacity = 0.6 if fill_color != "#95A5A6" else 0.3
-                
-                folium.GeoJson(
-                    feature,
-                    name=wilayah_name,
-                    style_function=lambda x, color=fill_color, op=opacity: {
-                        'fillColor': color,
-                        'color': '#2C3E50',
-                        'weight': 1.5,
-                        'fillOpacity': op,
-                    },
-                    tooltip=wilayah_name,
-                    popup=folium.Popup(popup_html, max_width=250)
-                ).add_to(m)
-                
-                # Label di tengah polygon
-                if show_labels and wilayah_name:
-                    try:
-                        geom = feature.get('geometry', {})
-                        if geom.get('type') == 'Polygon':
-                            coords = geom['coordinates'][0]
-                            if coords and len(coords) > 0:
-                                lats = [c[1] for c in coords]
-                                lons = [c[0] for c in coords]
-                                center_lat_label = sum(lats) / len(lats)
-                                center_lon_label = sum(lons) / len(lons)
-                                
-                                folium.Marker(
-                                    location=[center_lat_label, center_lon_label],
-                                    icon=folium.DivIcon(
-                                        html=f'<div style="font-size: 10px; font-weight: bold; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid {fill_color};">{wilayah_name}</div>'
-                                    )
-                                ).add_to(m)
-                    except:
-                        pass
-        
-        # Legend
-        legend_html = '''
-        <div style="position: fixed; bottom: 30px; right: 30px; background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 11px; z-index: 1000;">
-            <b>Status</b><br>
-            <span style="color:#e74c3c;">■</span> Kritis<br>
-            <span style="color:#f39c12;">■</span> Waspada<br>
-            <span style="color:#27ae60;">■</span> Aman<br>
-            <span style="color:#95a5a6;">■</span> Belum
-        </div>
-        '''
-        m.get_root().html.add_child(folium.Element(legend_html))
-        
-        # Tampilkan peta
-        st_folium(m, width=None, height=550, key="map_main")
-        
-    except FileNotFoundError:
-        st.error("File GeoJSON tidak ditemukan")
-    except Exception as e:
-        st.error(f"Error: {e}")
+            fill_color = get_wilayah_color(wilayah_name)
+            params = st.session_state.wilayah_params.get(wilayah_name, {})
+            status_text = st.session_state.wilayah_status.get(wilayah_name, 'Belum diprediksi')
+            
+            popup_html = f"""
+            <div style="min-width: 180px;">
+                <b>{wilayah_name}</b><br>
+                Status: {status_text}<br>
+                <hr>
+                Rasio Angkut: {params.get('rasio_angkut', '-')}<br>
+                Rasio Diolah: {params.get('rasio_diolah', '-')}<br>
+                Rasio Sisa: {params.get('rasio_sisa', '-')}<br>
+                Indeks Jarak: {params.get('indeks_jarak', '-')}
+            </div>
+            """
+            
+            opacity = 0.6 if fill_color != "#95A5A6" else 0.3
+            
+            folium.GeoJson(
+                feature,
+                name=wilayah_name,
+                style_function=lambda x, color=fill_color, op=opacity: {
+                    'fillColor': color,
+                    'color': '#2C3E50',
+                    'weight': 1.5,
+                    'fillOpacity': op,
+                },
+                tooltip=wilayah_name,
+                popup=folium.Popup(popup_html, max_width=250)
+            ).add_to(m)
+            
+            # Label di tengah polygon
+            if show_labels and wilayah_name:
+                try:
+                    geom = feature.get('geometry', {})
+                    if geom.get('type') == 'Polygon':
+                        coords = geom['coordinates'][0]
+                        if coords and len(coords) > 0:
+                            lats = [c[1] for c in coords]
+                            lons = [c[0] for c in coords]
+                            center_lat_label = sum(lats) / len(lats)
+                            center_lon_label = sum(lons) / len(lons)
+                            
+                            folium.Marker(
+                                location=[center_lat_label, center_lon_label],
+                                icon=folium.DivIcon(
+                                    html=f'<div style="font-size: 10px; font-weight: bold; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid {fill_color};">{wilayah_name}</div>'
+                                )
+                            ).add_to(m)
+                except:
+                    pass
+    
+    # Legend
+    legend_html = '''
+    <div style="position: fixed; bottom: 30px; right: 30px; background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 11px; z-index: 1000;">
+        <b>Status</b><br>
+        <span style="color:#e74c3c;">■</span> Kritis<br>
+        <span style="color:#f39c12;">■</span> Waspada<br>
+        <span style="color:#27ae60;">■</span> Aman<br>
+        <span style="color:#95a5a6;">■</span> Belum
+    </div>
+    '''
+    m.get_root().html.add_child(folium.Element(legend_html))
+    
+    # Tampilkan peta
+    st_folium(m, width=None, height=550, key="map_main")
+    
+    st.caption("📌 Klik area untuk melihat detail | Warna berubah setelah klasifikasi")
 
 # Footer
 st.divider()
