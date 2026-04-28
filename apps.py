@@ -47,12 +47,12 @@ with st.expander("ℹ️ Panduan Pengisian Fitur"):
 mode = st.radio("Pilih metode input:", ["Input Manual", "Pilih Contoh Data SWK"], horizontal=True)
 
 CONTOH_DATA = {
-    "SWK Bojonagara,
-    "SWK Cibeunying,
-    "SWK Tegallega,
-    "SWK Ubermanik,
-    "SWK Kordoba,
-    "SWK Karees,
+    "SWK Bojonagara",
+    "SWK Cibeunying",
+    "SWK Tegallega",
+    "SWK Ubermanik",
+    "SWK Kordoba",
+    "SWK Karees",
     
 }
 
