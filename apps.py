@@ -9,7 +9,7 @@ import json
 
 st.set_page_config(
     page_title="Klasifikasi Pengelolaan Sampah",
-    layout="wide"  # Ubah ke wide untuk peta lebih lebar
+    layout="wide"
 )
 
 # Custom CSS untuk styling modern dan responsif tema
@@ -25,7 +25,6 @@ st.markdown("""
         --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
     }
     
-    /* Status card styling */
     .status-card {
         background: var(--secondary-background-color);
         border-radius: var(--border-radius);
@@ -124,13 +123,11 @@ st.markdown("""
         margin: 1rem 0;
     }
     
-    /* Icon styling */
     .status-icon {
         font-size: 1.75rem;
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     }
     
-    /* Map container */
     .map-container {
         border-radius: var(--border-radius);
         overflow: hidden;
@@ -148,13 +145,26 @@ def load_model():
 
 model = load_model()
 
-# Load GeoJSON data (kita buat data contoh, ganti dengan file GeoJSON asli jika ada)
+# Load GeoJSON data
 @st.cache_data
 def load_geojson():
-    gdf = gpd.read_file("3273-kota-bandung-level-kewilayahan.json")  # Ganti dengan file asli
+    gdf = gpd.read_file("3273-kota-bandung-level-kewilayahan.json")
     return gdf
 
-# Konstanta label dengan icon elegant
+# Data koordinat titik SWK (untuk marker)
+@st.cache_data
+def get_swk_points():
+    """Data titik koordinat SWK Kota Bandung"""
+    return {
+        "SWK Bojonagara": {"lat": -6.9175, "lon": 107.6069},
+        "SWK Cibeunying": {"lat": -6.8925, "lon": 107.6244},
+        "SWK Tegallega": {"lat": -6.9146, "lon": 107.6061},
+        "SWK Ubermanik": {"lat": -6.9124, "lon": 107.6166},
+        "SWK Kordoba": {"lat": -6.9024, "lon": 107.6192},
+        "SWK Karees": {"lat": -6.9305, "lon": 107.5978}
+    }
+
+# Konstanta label
 LABEL_CONFIG = {
     "KRITIS": {
         "color": "#E74C3C", 
@@ -179,12 +189,24 @@ LABEL_CONFIG = {
     },
 }
 
-# Sidebar untuk kontrol peta
+# Data contoh SWK
+CONTOH_DATA = {
+    "SWK Bojonagara": {"rasio_angkut": 0.55, "rasio_diolah": 0.30, "rasio_sisa": 0.45, "indeks_jarak": 0.80},
+    "SWK Cibeunying": {"rasio_angkut": 0.72, "rasio_diolah": 0.50, "rasio_sisa": 0.28, "indeks_jarak": 0.55},
+    "SWK Tegallega": {"rasio_angkut": 0.90, "rasio_diolah": 0.75, "rasio_sisa": 0.10, "indeks_jarak": 0.30},
+    "SWK Ubermanik": {"rasio_angkut": 0.88, "rasio_diolah": 0.70, "rasio_sisa": 0.12, "indeks_jarak": 0.35},
+    "SWK Kordoba": {"rasio_angkut": 0.85, "rasio_diolah": 0.65, "rasio_sisa": 0.15, "indeks_jarak": 0.40},
+    "SWK Karees": {"rasio_angkut": 0.82, "rasio_diolah": 0.60, "rasio_sisa": 0.18, "indeks_jarak": 0.45}
+}
+
+# Sidebar
 with st.sidebar:
     st.markdown("### 🗺️ Peta Sebaran SWK")
     st.markdown("---")
     show_map = st.checkbox("Tampilkan Peta", value=True)
+    show_swk_markers = st.checkbox("Tampilkan Marker SWK", value=True)
     show_labels = st.checkbox("Tampilkan Label SWK", value=True)
+    show_boundary = st.checkbox("Tampilkan Batas Wilayah", value=True)
     st.markdown("---")
     st.markdown("**Keterangan Warna:**")
     st.markdown("🔴 **Merah**: Kritis")
@@ -199,7 +221,7 @@ st.markdown(
 )
 st.divider()
 
-# Layout dengan 2 kolom: kiri untuk input, kanan untuk peta
+# Layout 2 kolom
 col_left, col_right = st.columns([1, 1.2])
 
 with col_left:
@@ -218,15 +240,6 @@ with col_left:
     
     # Mode input
     mode = st.radio("Pilih metode input:", ["Input Manual", "Pilih Contoh Data SWK"], horizontal=True)
-    
-    CONTOH_DATA = {
-        "SWK Bojonagara": {"rasio_angkut": 0.55, "rasio_diolah": 0.30, "rasio_sisa": 0.45, "indeks_jarak": 0.80},
-        "SWK Cibeunying": {"rasio_angkut": 0.72, "rasio_diolah": 0.50, "rasio_sisa": 0.28, "indeks_jarak": 0.55},
-        "SWK Tegallega": {"rasio_angkut": 0.90, "rasio_diolah": 0.75, "rasio_sisa": 0.10, "indeks_jarak": 0.30},
-        "SWK Ubermanik": {"rasio_angkut": 0.88, "rasio_diolah": 0.70, "rasio_sisa": 0.12, "indeks_jarak": 0.35},
-        "SWK Kordoba": {"rasio_angkut": 0.85, "rasio_diolah": 0.65, "rasio_sisa": 0.15, "indeks_jarak": 0.40},
-        "SWK Karees": {"rasio_angkut": 0.82, "rasio_diolah": 0.60, "rasio_sisa": 0.18, "indeks_jarak": 0.45}
-    }
     
     if mode == "Pilih Contoh Data SWK":
         pilihan = st.selectbox("Pilih SWK:", list(CONTOH_DATA.keys()))
@@ -287,7 +300,6 @@ with col_left:
             
             cfg = LABEL_CONFIG[label]
             
-            # Status card dengan Streamlit native components
             with st.container():
                 if label == "KRITIS":
                     st.error(f"**{cfg['icon']} STATUS: {label}**")
@@ -298,7 +310,6 @@ with col_left:
                 
                 st.markdown(cfg['desc'])
             
-            # Probabilitas menggunakan komponen Streamlit native
             if hasattr(model, "predict_proba"):
                 st.markdown("### 📈 Probabilitas per Kategori")
                 proba = model.predict_proba(fitur)[0]
@@ -317,7 +328,6 @@ with col_left:
                         st.markdown(f"<h3 style='text-align:right; margin:0;'>{item['Probabilitas']}</h3>", 
                                    unsafe_allow_html=True)
             
-            # Ringkasan input dengan metric cards
             st.markdown("### 📊 Ringkasan Input")
             col_a, col_b, col_c, col_d = st.columns(4)
             
@@ -330,7 +340,6 @@ with col_left:
             with col_d:
                 st.metric("Indeks Jarak", f"{indeks_jarak:.3f}")
             
-            # Rekomendasi
             st.markdown("### 💡 Rekomendasi")
             rekomendasi = []
             if rasio_sisa > 0.3:
@@ -352,109 +361,130 @@ with col_left:
 
 with col_right:
     if show_map:
-        st.markdown("### 🗺️ Peta Wilayah SWK Kota Bandung")
+        st.markdown("### 🗺️ Peta Wilayah Kota Bandung")
         
-        # Load data SWK
-        swk_data = load_geojson()
-        
-        # Hitung status untuk setiap SWK berdasarkan data contoh
-        swk_status = {}
-        for nama, data in CONTOH_DATA.items():
-            fitur = np.array([[data["rasio_angkut"], data["rasio_diolah"], data["rasio_sisa"], data["indeks_jarak"]]])
-            try:
-                pred = model.predict(fitur)[0]
-                swk_status[nama] = str(pred).strip().upper()
-            except:
-                swk_status[nama] = "WASPADA"
-        
-        # Buat peta dengan Folium
-        center_lat = -6.9146
-        center_lon = 107.6098
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=13, control_scale=True)
-        
-        # Tambahkan tile layer yang lebih professional
-        folium.TileLayer('CartoDB positron', name='Light Map', show=True).add_to(m)
-        folium.TileLayer('OpenStreetMap', name='Street Map', show=False).add_to(m)
-        
-        # Tambahkan marker untuk setiap SWK
-        for nama, koord in swk_data.items():
-            status = swk_status.get(nama, "WASPADA")
+        try:
+            # Load GeoJSON (polygon wilayah)
+            gdf = load_geojson()
             
-            # Tentukan warna marker berdasarkan status
-            if status == "KRITIS":
-                color = "red"
-                icon_color = "white"
-                status_text = "KRITIS"
-            elif status == "AMAN":
-                color = "green"
-                icon_color = "white"
-                status_text = "AMAN"
-            else:
-                color = "orange"
-                icon_color = "white"
-                status_text = "WASPADA"
+            # Load titik SWK
+            swk_points = get_swk_points()
             
-            # Data parameter untuk ditampilkan di popup
-            param_data = CONTOH_DATA.get(nama, {})
+            # Hitung status untuk setiap SWK
+            swk_status = {}
+            for nama, data in CONTOH_DATA.items():
+                fitur = np.array([[data["rasio_angkut"], data["rasio_diolah"], data["rasio_sisa"], data["indeks_jarak"]]])
+                try:
+                    pred = model.predict(fitur)[0]
+                    swk_status[nama] = str(pred).strip().upper()
+                except:
+                    swk_status[nama] = "WASPADA"
             
-            # Buat popup HTML
-            popup_html = f"""
-            <div style="min-width: 200px;">
-                <h4 style="margin: 0 0 10px 0; color: {color};">{nama}</h4>
-                <p style="margin: 5px 0;"><strong>Status:</strong> {status_text}</p>
-                <hr style="margin: 8px 0;">
-                <p style="margin: 5px 0; font-size: 12px;"><strong>Rasio Angkut:</strong> {param_data.get('rasio_angkut', 0):.2f}</p>
-                <p style="margin: 5px 0; font-size: 12px;"><strong>Rasio Diolah:</strong> {param_data.get('rasio_diolah', 0):.2f}</p>
-                <p style="margin: 5px 0; font-size: 12px;"><strong>Rasio Sisa:</strong> {param_data.get('rasio_sisa', 0):.2f}</p>
-                <p style="margin: 5px 0; font-size: 12px;"><strong>Indeks Jarak:</strong> {param_data.get('indeks_jarak', 0):.2f}</p>
+            # Buat peta
+            center_lat = -6.9146
+            center_lon = 107.6098
+            m = folium.Map(location=[center_lat, center_lon], zoom_start=12, control_scale=True)
+            
+            # Tile layers
+            folium.TileLayer('CartoDB positron', name='Light Map', show=True).add_to(m)
+            folium.TileLayer('OpenStreetMap', name='Street Map', show=False).add_to(m)
+            folium.TileLayer('CartoDB dark_matter', name='Dark Map', show=False).add_to(m)
+            
+            # Tambahkan polygon batas wilayah dari GeoJSON
+            if show_boundary:
+                for idx, row in gdf.iterrows():
+                    # Dapatkan nama wilayah jika ada kolom nama
+                    wilayah_name = row.get('nama_wilayah', row.get('KECAMATAN', row.get('NAME', f'Wilayah {idx+1}')))
+                    
+                    # Buat style untuk polygon
+                    folium.GeoJson(
+                        row['geometry'],
+                        name=f'{wilayah_name}',
+                        style_function=lambda x: {
+                            'fillColor': '#2C3E50',
+                            'color': '#34495E',
+                            'weight': 1,
+                            'fillOpacity': 0.1,
+                        },
+                        tooltip=folium.Tooltip(f"{wilayah_name}", sticky=True),
+                        popup=folium.Popup(f"<b>{wilayah_name}</b><br>Wilayah Administrasi Kota Bandung", max_width=200)
+                    ).add_to(m)
+            
+            # Tambahkan marker untuk setiap SWK
+            if show_swk_markers:
+                for nama, koord in swk_points.items():
+                    status = swk_status.get(nama, "WASPADA")
+                    
+                    if status == "KRITIS":
+                        color = "red"
+                        status_text = "KRITIS"
+                    elif status == "AMAN":
+                        color = "green"
+                        status_text = "AMAN"
+                    else:
+                        color = "orange"
+                        status_text = "WASPADA"
+                    
+                    param_data = CONTOH_DATA.get(nama, {})
+                    
+                    popup_html = f"""
+                    <div style="min-width: 220px;">
+                        <h4 style="margin: 0 0 10px 0; color: {color};">{nama}</h4>
+                        <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color:{color};">{status_text}</span></p>
+                        <hr style="margin: 8px 0;">
+                        <p style="margin: 5px 0; font-size: 12px;"><strong>Rasio Angkut:</strong> {param_data.get('rasio_angkut', 0):.2f}</p>
+                        <p style="margin: 5px 0; font-size: 12px;"><strong>Rasio Diolah:</strong> {param_data.get('rasio_diolah', 0):.2f}</p>
+                        <p style="margin: 5px 0; font-size: 12px;"><strong>Rasio Sisa:</strong> {param_data.get('rasio_sisa', 0):.2f}</p>
+                        <p style="margin: 5px 0; font-size: 12px;"><strong>Indeks Jarak:</strong> {param_data.get('indeks_jarak', 0):.2f}</p>
+                    </div>
+                    """
+                    
+                    folium.Marker(
+                        location=[koord["lat"], koord["lon"]],
+                        popup=folium.Popup(popup_html, max_width=300),
+                        tooltip=f"{nama} - {status_text}",
+                        icon=folium.Icon(color=color, icon_color="white", icon="info-sign", prefix='glyphicon')
+                    ).add_to(m)
+                    
+                    if show_labels:
+                        folium.Marker(
+                            location=[koord["lat"] + 0.0015, koord["lon"]],
+                            icon=folium.DivIcon(
+                                html=f'<div style="font-size: 10px; font-weight: 600; background: white; padding: 2px 8px; border-radius: 4px; border: 1px solid {color}; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap;">{nama}</div>'
+                            )
+                        ).add_to(m)
+            
+            # Legend
+            legend_html = '''
+            <div style="position: fixed; bottom: 30px; right: 30px; z-index: 1000; background: white; padding: 10px 14px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 12px; font-family: sans-serif;">
+                <strong>Status SWK</strong><br>
+                <span style="color: #e74c3c;">●</span> Kritis<br>
+                <span style="color: #f39c12;">●</span> Waspada<br>
+                <span style="color: #27ae60;">●</span> Aman
             </div>
-            """
+            '''
+            m.get_root().html.add_child(folium.Element(legend_html))
             
-            # Tambahkan marker
-            folium.Marker(
-                location=[koord["lat"], koord["lon"]],
-                popup=folium.Popup(popup_html, max_width=300),
-                tooltip=f"{nama} - {status_text}",
-                icon=folium.Icon(color=color, icon_color=icon_color, icon="info-sign", prefix='glyphicon')
-            ).add_to(m)
+            # Layer control
+            folium.LayerControl().add_to(m)
             
-            # Tambahkan label jika dipilih
-            if show_labels:
-                folium.Marker(
-                    location=[koord["lat"] + 0.002, koord["lon"]],
-                    icon=folium.DivIcon(
-                        html=f'<div style="font-size: 10px; font-weight: bold; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid {color}; white-space: nowrap;">{nama}</div>'
-                    )
-                ).add_to(m)
-        
-        # Tambahkan legend
-        legend_html = '''
-        <div style="position: fixed; bottom: 30px; right: 30px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 12px;">
-            <strong>Status SWK</strong><br>
-            <span style="color: red;">●</span> Kritis<br>
-            <span style="color: orange;">●</span> Waspada<br>
-            <span style="color: green;">●</span> Aman
-        </div>
-        '''
-        m.get_root().html.add_child(folium.Element(legend_html))
-        
-        # Tambahkan kontrol layer
-        folium.LayerControl().add_to(m)
-        
-        # Tampilkan peta
-        st.components.v1.html(m._repr_html_(), height=600)
-        
-        # Informasi tambahan
-        st.caption("Klik pada marker untuk melihat detail parameter setiap SWK")
+            # Tampilkan peta
+            st_folium(m, width=None, height=600, key="bandung_map")
+            
+            st.caption("📌 Klik marker untuk melihat detail parameter setiap SWK | 🗺️ Layer peta bisa diganti di pojok kanan atas")
+            
+        except Exception as e:
+            st.error(f"Error memuat peta: {e}")
+            st.info("Pastikan file '3273-kota-bandung-level-kewilayahan.json' tersedia di direktori yang sama")
     else:
-        st.info("🗺️ Aktifkan 'Tampilkan Peta' di sidebar untuk melihat visualisasi sebaran SWK Kota Bandung")
+        st.info("🗺️ Aktifkan 'Tampilkan Peta' di sidebar untuk melihat visualisasi wilayah Kota Bandung")
 
 # Footer
 st.divider()
 st.markdown(
     "<div style='text-align:center; opacity:0.6; font-size:0.875rem;'>"
     "Developed with ❤️ by <strong>Masoem University</strong> – Fakultas Teknik<br>"
-    "Data SWK berdasarkan klasifikasi model WBI"
+    "Data SWK berdasarkan klasifikasi model WBI | Peta: Kota Bandung"
     "</div>",
     unsafe_allow_html=True
 )
