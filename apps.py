@@ -1,10 +1,8 @@
 import streamlit as st
 import pickle
 import numpy as np
-import geopandas as gpd
 import folium
 from streamlit_folium import st_folium
-from folium.plugins import MarkerCluster
 import json
 
 st.set_page_config(
@@ -145,13 +143,13 @@ def load_model():
 
 model = load_model()
 
-# Load GeoJSON data
+# Load GeoJSON tanpa geopandas (pakai json biasa)
 @st.cache_data
 def load_geojson():
-    gdf = gpd.read_file("3273-kota-bandung-level-kewilayahan.json")
-    return gdf
+    with open("3273-kota-bandung-level-kewilayahan.json", "r") as f:
+        return json.load(f)
 
-# Data koordinat titik SWK (untuk marker)
+# Data titik SWK
 @st.cache_data
 def get_swk_points():
     """Data titik koordinat SWK Kota Bandung"""
@@ -364,10 +362,8 @@ with col_right:
         st.markdown("### 🗺️ Peta Wilayah Kota Bandung")
         
         try:
-            # Load GeoJSON (polygon wilayah)
-            gdf = load_geojson()
-            
-            # Load titik SWK
+            # Load GeoJSON (sebagai json biasa, bukan geopandas)
+            geojson_data = load_geojson()
             swk_points = get_swk_points()
             
             # Hitung status untuk setiap SWK
@@ -390,27 +386,22 @@ with col_right:
             folium.TileLayer('OpenStreetMap', name='Street Map', show=False).add_to(m)
             folium.TileLayer('CartoDB dark_matter', name='Dark Map', show=False).add_to(m)
             
-            # Tambahkan polygon batas wilayah dari GeoJSON
-            if show_boundary:
-                for idx, row in gdf.iterrows():
-                    # Dapatkan nama wilayah jika ada kolom nama
-                    wilayah_name = row.get('nama_wilayah', row.get('KECAMATAN', row.get('NAME', f'Wilayah {idx+1}')))
-                    
-                    # Buat style untuk polygon
-                    folium.GeoJson(
-                        row['geometry'],
-                        name=f'{wilayah_name}',
-                        style_function=lambda x: {
-                            'fillColor': '#2C3E50',
-                            'color': '#34495E',
-                            'weight': 1,
-                            'fillOpacity': 0.1,
-                        },
-                        tooltip=folium.Tooltip(f"{wilayah_name}", sticky=True),
-                        popup=folium.Popup(f"<b>{wilayah_name}</b><br>Wilayah Administrasi Kota Bandung", max_width=200)
-                    ).add_to(m)
+            # Tambahkan polygon dari GeoJSON
+            if show_boundary and geojson_data:
+                folium.GeoJson(
+                    geojson_data,
+                    name='Batas Wilayah Kota Bandung',
+                    style_function=lambda x: {
+                        'fillColor': '#2C3E50',
+                        'color': '#34495E',
+                        'weight': 1.5,
+                        'fillOpacity': 0.1,
+                    },
+                    tooltip='Kota Bandung',
+                    popup=folium.Popup('<b>Kota Bandung</b><br>Wilayah Administrasi', max_width=200)
+                ).add_to(m)
             
-            # Tambahkan marker untuk setiap SWK
+            # Tambahkan marker SWK
             if show_swk_markers:
                 for nama, koord in swk_points.items():
                     status = swk_status.get(nama, "WASPADA")
@@ -465,7 +456,6 @@ with col_right:
             '''
             m.get_root().html.add_child(folium.Element(legend_html))
             
-            # Layer control
             folium.LayerControl().add_to(m)
             
             # Tampilkan peta
@@ -473,9 +463,11 @@ with col_right:
             
             st.caption("📌 Klik marker untuk melihat detail parameter setiap SWK | 🗺️ Layer peta bisa diganti di pojok kanan atas")
             
+        except FileNotFoundError:
+            st.error("File '3273-kota-bandung-level-kewilayahan.json' tidak ditemukan")
+            st.info("Pastikan file GeoJSON tersedia di direktori yang sama dengan aplikasi")
         except Exception as e:
             st.error(f"Error memuat peta: {e}")
-            st.info("Pastikan file '3273-kota-bandung-level-kewilayahan.json' tersedia di direktori yang sama")
     else:
         st.info("🗺️ Aktifkan 'Tampilkan Peta' di sidebar untuk melihat visualisasi wilayah Kota Bandung")
 
