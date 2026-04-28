@@ -4,7 +4,6 @@ import numpy as np
 
 st.set_page_config(
     page_title="Klasifikasi Pengelolaan Sampah",
-    page_icon="🗑️",
     layout="centered"
 )
 # ── Load model ──────────────────────────────────────────────────────────────
@@ -26,7 +25,7 @@ LABEL_CONFIG = {
 
 
 st.markdown(
-    "<h1 style='text-align:center;'>🗑️ Klasifikasi Pengelolaan Sampah</h1>"
+    "<h1 style='text-align:center;'>Klasifikasi Pengelolaan Sampah</h1>"
     "<p style='text-align:center; color:gray;'>Kota Bandung — Berbasis Waste Burden Index (WBI)</p>",
     unsafe_allow_html=True
 )
@@ -130,7 +129,7 @@ if st.button("🔍 Prediksi Klasifikasi", use_container_width=True, type="primar
             proba_html = f"""
             <p style='margin-top:12px; font-weight:bold;'>Probabilitas per Label:</p>
             <table style='width:100%; border-collapse:collapse;'>
-              <tr style='background:#f0f0f0;'><th style='text-align:left;padding:4px'>Label</th><th style='text-align:left;padding:4px'>Probabilitas</th></tr>
+              <tr style='background:#000000;'><th style='text-align:left;padding:4px'>Label</th><th style='text-align:left;padding:4px'>Probabilitas</th></tr>
               {proba_rows}
             </table>
             """
