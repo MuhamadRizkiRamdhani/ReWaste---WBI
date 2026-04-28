@@ -47,12 +47,12 @@ with st.expander("ℹ️ Panduan Pengisian Fitur"):
 mode = st.radio("Pilih metode input:", ["Input Manual", "Pilih Contoh Data SWK"], horizontal=True)
 
 CONTOH_DATA = {
-    "SWK Bojonagara",
-    "SWK Cibeunying",
-    "SWK Tegallega",
-    "SWK Ubermanik",
-    "SWK Kordoba",
-    "SWK Karees",
+    "SWK Bojonagara":  {"rasio_angkut": 0.55, "rasio_diolah": 0.30, "rasio_sisa": 0.45, "indeks_jarak": 0.80},
+    "SWK Cibeunying": {"rasio_angkut": 0.72, "rasio_diolah": 0.50, "rasio_sisa": 0.28, "indeks_jarak": 0.55},
+    "SWK Tegallega":     {"rasio_angkut": 0.90, "rasio_diolah": 0.75, "rasio_sisa": 0.10, "indeks_jarak": 0.30},
+    "SWK Ubermanik":     {"rasio_angkut": 0.90, "rasio_diolah": 0.75, "rasio_sisa": 0.10, "indeks_jarak": 0.30},
+    "SWK Kordoba":     {"rasio_angkut": 0.90, "rasio_diolah": 0.75, "rasio_sisa": 0.10, "indeks_jarak": 0.30},
+    "SWK Karees":     {"rasio_angkut": 0.90, "rasio_diolah": 0.75, "rasio_sisa": 0.10, "indeks_jarak": 0.30}
     
 }
 
