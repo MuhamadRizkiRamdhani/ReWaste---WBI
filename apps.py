@@ -136,7 +136,7 @@ if st.button("🔍 Prediksi Klasifikasi", use_container_width=True, type="primar
             """
 
         st.markdown(f"""
-            <div style='background-color:{cfg["color"]};
+            <div style='background-color:#0D9AAC;
                         border-left: 6px solid {cfg["border"]};
                         padding:20px; border-radius:8px; margin-top:10px;'>
                 <h2 style='margin:0;'>{cfg["icon"]} Status: <b>{label}</b></h2>
@@ -176,7 +176,7 @@ if st.button("🔍 Prediksi Klasifikasi", use_container_width=True, type="primar
 st.divider()
 st.markdown(
     "<div style='text-align:center; color:#888888; font-size:14px;'>"
-    "Developed by <strong>Dsloven Group 7</strong> – DS Batch 49"
+    "Developed by <strong>Masoem University</strong> – Fakultas Teknik"
     "</div>",
     unsafe_allow_html=True
 )
