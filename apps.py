@@ -242,28 +242,20 @@ with col_left:
 with col_right:
     st.markdown("### 🗺️ Peta Wilayah Kota Bandung")
     
-    try:
-        with open("3273-kota-bandung-level-kewilayahan.json", "r") as f:
-            geojson_data = json.load(f)
-        
-        center_lat = -6.9146
-        center_lon = 107.6098
-        
-        # Pakai Google Maps Satellite
-        m = folium.Map(
-            location=[center_lat, center_lon], 
-            zoom_start=12,
-            control_scale=True
-        )
-        
-        # Tambahkan tile manual
-        folium.TileLayer(
-            tiles='https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-            attr='Google',
-            name='Google Maps',
-            overlay=False,
-            control=True
-        ).add_to(m)
+    # Embed Google Maps langsung
+    map_html = '''
+    <iframe 
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126847.66378256428!2d107.56345259232488!3d-6.917463825314377!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e68e67342eb2041%3A0x8d3ddf732125a574!2sBandung%2C%20Bandung%20City%2C%20West%20Java!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid" 
+        width="100%" 
+        height="550" 
+        style="border:0; border-radius:12px;" 
+        allowfullscreen="" 
+        loading="lazy">
+    </iframe>
+    '''
+    st.components.v1.html(map_html, height=570)
+    
+    st.caption("📌 Gunakan peta Google Maps untuk melihat batas wilayah")
         
         def get_wilayah_color(wilayah_name):
             status = st.session_state.wilayah_status.get(wilayah_name, "")
