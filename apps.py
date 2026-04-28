@@ -243,20 +243,14 @@ with col_right:
     st.markdown("### 🗺️ Peta Wilayah Kota Bandung")
     
     try:
-        # Load GeoJSON
         with open("3273-kota-bandung-level-kewilayahan.json", "r") as f:
             geojson_data = json.load(f)
         
         center_lat = -6.9146
         center_lon = 107.6098
         
-        # Buat peta dengan tile yang pasti jalan
-        m = folium.Map(
-            location=[center_lat, center_lon],
-            zoom_start=11,
-            tiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB'
-        )
+        # PAKAI INI - OpenStreetMap biasa
+        m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles='OpenStreetMap')
         
         def get_wilayah_color(wilayah_name):
             status = st.session_state.wilayah_status.get(wilayah_name, "")
