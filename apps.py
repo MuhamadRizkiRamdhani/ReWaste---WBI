@@ -95,15 +95,16 @@ with st.sidebar:
 
 # Header
 st.markdown(
-    "<head>
-        
+     """
+    <head>
         <meta name="dicoding:email" content="rizki123.rs1@gmail.com">
         <meta name="dicoding:email" content="andinn1410@gmail.com">
         <meta name="dicoding:email" content="nauvaall.qa@gmail.com">
-    
-    </head>"
-    "<h1 style='text-align:center;'>🗑️ Klasifikasi Pengelolaan Sampah</h1>"
-    "<p style='text-align:center;'>Kota Bandung — Berbasis Waste Burden Index (WBI)</p>",
+    </head>
+
+    <h1 style='text-align:center;'>🗑️ Klasifikasi Pengelolaan Sampah</h1>
+    <p style='text-align:center;'>Kota Bandung — Berbasis Waste Burden Index (WBI)</p>
+    """,
     unsafe_allow_html=True
 )
 st.divider()
